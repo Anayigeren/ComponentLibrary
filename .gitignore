@@ -3,3 +3,18 @@
 ################################################################################
 
 /Data Access Application Block/Dapper
+/Data Access Application Block/HongYang.Enterprise.Data/bin/Debug
+/Data Access Application Block/HongYang.Enterprise.Data.Connenction/bin/Debug
+/Data Access Application Block/HongYang.Enterprise.Data.Sqlite/bin/Debug
+/Data Access Application Block/HongYang.Enterprise.Data.Sqlite/obj/Debug
+/Data Access Application Block/HongYang.Enterprise.Data.Mongo/obj/Debug
+/Data Access Application Block/HongYang.Enterprise.Data.MySQL/obj/Debug
+/Data Access Application Block/HongYang.Enterprise.Data.Connenction/obj/Debug
+/Data Access Application Block/HongYang.Enterprise.Data/obj/Debug
+/HongYang.Enterprise.UnitTests/bin/Debug
+/HongYang.Enterprise.UnitTests/obj/Debug
+/Logging Application Block/HongYang.Enterprise.Logging/bin/Debug
+/packages
+/.vs
+/Data Access Application Block/HongYang.Enterprise.Data.SqlServer/obj/Debug
+/Logging Application Block/HongYang.Enterprise.Logging/obj/Debug

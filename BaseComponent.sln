@@ -1,0 +1,52 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29020.237
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HongYang.Enterprise.UnitTests", "HongYang.Enterprise.UnitTests\HongYang.Enterprise.UnitTests.csproj", "{7F6D2439-83C3-42CE-95D3-9598B508490D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Logging Application Block", "Logging Application Block", "{F6027E4D-AC5E-4793-AD17-05B188173144}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HongYang.Enterprise.Logging", "Logging Application Block\HongYang.Enterprise.Logging\HongYang.Enterprise.Logging.csproj", "{91080F48-EA37-4814-AA1F-9DA0415D2C3C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data Access Application Block", "Data Access Application Block", "{A67278D8-868D-4C31-BE66-28884B818471}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HongYang.Enterprise.Data", "Data Access Application Block\HongYang.Enterprise.Data\HongYang.Enterprise.Data.csproj", "{6D0514EB-6320-45EF-B8E4-D5D318142015}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HongYang.Enterprise.Data.Connenction", "Data Access Application Block\HongYang.Enterprise.Data.Connenction\HongYang.Enterprise.Data.Connenction.csproj", "{1EE888C1-6965-4755-B910-59A04F8A5DB8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7F6D2439-83C3-42CE-95D3-9598B508490D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F6D2439-83C3-42CE-95D3-9598B508490D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F6D2439-83C3-42CE-95D3-9598B508490D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F6D2439-83C3-42CE-95D3-9598B508490D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91080F48-EA37-4814-AA1F-9DA0415D2C3C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91080F48-EA37-4814-AA1F-9DA0415D2C3C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91080F48-EA37-4814-AA1F-9DA0415D2C3C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91080F48-EA37-4814-AA1F-9DA0415D2C3C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D0514EB-6320-45EF-B8E4-D5D318142015}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D0514EB-6320-45EF-B8E4-D5D318142015}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D0514EB-6320-45EF-B8E4-D5D318142015}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D0514EB-6320-45EF-B8E4-D5D318142015}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1EE888C1-6965-4755-B910-59A04F8A5DB8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1EE888C1-6965-4755-B910-59A04F8A5DB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1EE888C1-6965-4755-B910-59A04F8A5DB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1EE888C1-6965-4755-B910-59A04F8A5DB8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{91080F48-EA37-4814-AA1F-9DA0415D2C3C} = {F6027E4D-AC5E-4793-AD17-05B188173144}
+		{6D0514EB-6320-45EF-B8E4-D5D318142015} = {A67278D8-868D-4C31-BE66-28884B818471}
+		{1EE888C1-6965-4755-B910-59A04F8A5DB8} = {A67278D8-868D-4C31-BE66-28884B818471}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {829E3B15-F7A9-41AD-89AF-D31630EFC147}
+	EndGlobalSection
+EndGlobal
