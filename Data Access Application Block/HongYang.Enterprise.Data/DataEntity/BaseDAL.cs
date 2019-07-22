@@ -9,7 +9,9 @@ using HongYang.Enterprise.Logging;
 namespace HongYang.Enterprise.Data.DataEntity
 {
     /// <summary>
-    /// 数据库操作抽象基类
+    /// 创 建 人：林志斌
+    /// 创建时间：2019/07/22
+    /// 功    能：数据库操作抽象基类
     /// </summary>
     public abstract class BaseDAL
     {
@@ -19,10 +21,10 @@ namespace HongYang.Enterprise.Data.DataEntity
         public const int DEFAULTTIMEOUT = 60;
 
         /// <summary>
-        /// 创建连接对象，并打开连接        
+        /// 创建连接对象，并打开连接，用于DAL内部创建       
         /// </summary>
         /// <returns></returns>
-        public virtual IDbConnection CreateConnectionAndOpen()
+        protected virtual IDbConnection CreateConnectionAndOpen()
         {
             try
             {
@@ -39,7 +41,8 @@ namespace HongYang.Enterprise.Data.DataEntity
 
         /// <summary>
         /// 创建连接对象，子类需要重写，根据自己的数据库类型实例化自己的数据库连接对象(支持IDbConnection接口)
-        /// Dapper可以在所有Ado.net Providers下工作，包括sqlite, sqlce, firebird, oracle, MySQL, PostgreSQL and SQL Server。
+        /// Dapper可以在所有Ado.net Providers下工作
+        /// 包括sqlite, sqlce, firebird, oracle, MySQL, PostgreSQL and SQL Server。
         /// </summary>
         /// <returns></returns>
         protected abstract IDbConnection CreateConnection();

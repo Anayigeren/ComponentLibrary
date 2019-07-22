@@ -43,38 +43,17 @@ namespace HongYang.Enterprise.Data.AdoNet
         /// 数据库连接
         /// </summary>
         /// <param name="connString">数据库连接字符串</param>
-        /// <remarks>
-        /// <para>
-        /// 不同的数据库系统，连接串格式不同：
-        /// </para>
-        /// <para>SQL Server数据库：</para>
-        /// <para>
-        /// <c>"Data Source=serverName; Initial Catalog=databaseName; User ID=MyUserID; Password=MyPassword;"</c>
-        /// </para>
-        /// <para>Oracle数据库：</para>
-        /// <para>
-        /// <c>"Data Source=serverName; User ID=MyUserID; Password=MyPassword;"</c>
-        /// </para>
-        /// <para>Access数据库：</para>
-        /// <para>
-        /// <c>"Data Source=C:\DatabasePath\MmDatabase.mdb; User Id=admin; Password=;"</c>
-        /// </para>
-        /// <para>DB2数据库：</para>
-        /// <para>
-        /// <c>"Network Transport Library=TCPIP; Network Address=IPAddress; 
-        ///             Initial Catalog=MyCatalog; Package Collection=MyPackageCollection; Default Schema=MySchema; 
-        ///             User ID=MyUsername; Password=MyPassword;
-        /// </c>
-        /// </para>
         /// </remarks>
         /// <returns>指定数据源的连接对象</returns>
         public abstract IDbConnection GetDBConnection(string connString);
+
         /// <summary>
         /// 创建与指定数据源连接相关联的SQL命令对象。
         /// </summary>
         /// <param name="dbConn"></param>
         /// <returns></returns>
         public abstract IDbCommand GetDBCommand(IDbConnection dbConn);
+
         /// <summary>
         /// 数据库适配器
         /// </summary>
@@ -111,7 +90,7 @@ namespace HongYang.Enterprise.Data.AdoNet
         /// </summary>
         /// <param name="tablename">表名</param>
         /// <param name="filed">字段名称</param>
-        /// <param name="where">条件</param>
+        /// <param name="where">条件，where 之后的语句</param>
         /// <param name="value">字段值</param>
         /// <returns></returns>
         public abstract int UpdateClob(string tablename, string filed, string where, object value);
@@ -312,7 +291,7 @@ namespace HongYang.Enterprise.Data.AdoNet
         }
 
         /// <summary>
-        /// ExecuteScalar 返回结果集第一行
+        /// IDataReader 返回结果集第一行第一列
         /// </summary>
         /// <param name="sqlText">SQL语句</param>
         /// <param name="param">动态参数</param>

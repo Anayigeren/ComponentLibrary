@@ -92,8 +92,13 @@ namespace HongYang.Enterprise.Data.AdoNet
         {
             try
             {
-                string sqlText = @"select column_name from user_cons_columns where constraint_name = 
-                    (select constraint_name from user_constraints where table_name = :TableName and constraint_type = 'P')";
+                string sqlText = @"select column_name
+	                                 from user_cons_columns
+                                    where constraint_name = (
+                                      select constraint_name
+		                                from user_constraints
+		                               where table_name = :TableName
+			                             and constraint_type = 'P')";
                 object value = ExecuteScalar(sqlText, new { TableName = tableName});
                 return value != null ? value.ToString() : string.Empty;
             }

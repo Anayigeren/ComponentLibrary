@@ -1,20 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using log4net;
 using log4net.Config;
-using HongYang.Enterprise.Logging.Helpers;
 using System.Xml.Linq;
-using System.Collections.Concurrent;
-using HongYang.Enterprise.Logging.Models;
 
 namespace HongYang.Enterprise.Logging
 {
     /// <summary>
     /// 日志组件帮助类
+    /// 仅实现文本日志记录，待完善
     /// </summary>
     public class LogHelper
     {
@@ -43,7 +40,7 @@ namespace HongYang.Enterprise.Logging
         /// <param name="appenderHelper">配置文件的绝对路径</param>
         public static void LogInit(ILogAppenderHelper appenderHelper)
         {
-            string configFilePath = ApplicationHelper.MapPath("~\\log4net.config");
+            string configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log4net.config");
             if (!File.Exists(configFilePath))
             {
                 throw new FileNotFoundException(configFilePath + "日志配置文件未发现");
@@ -51,7 +48,7 @@ namespace HongYang.Enterprise.Logging
 
             AppenderHelper = appenderHelper;
             XmlConfigurator.Configure(Valiteconfigfile(configFilePath));
-            RollFileLog = LogManager.GetLogger("RollFile");
+            RollFileLog = LogManager.GetLogger("RollFile") ;
         }
 
         /// <summary>
@@ -134,7 +131,7 @@ namespace HongYang.Enterprise.Logging
         /// </summary>
         /// <param name="log">记录信息</param>
         /// <param name="level">log等级</param>
-        public static void WriteDb<T>(T log, LogLevel level = LogLevel.Error)
+        public static void WriteDb<T>(T log, LogLevel level = LogLevel.Error) where T : class, new()
         {
             string errorMessage = string.Empty;
             try
@@ -142,7 +139,7 @@ namespace HongYang.Enterprise.Logging
                 var result = AppenderHelper.WriteDb<T>(log, ref errorMessage);
                 if (!result)
                 {
-                    Write(errorMessage); // 写入数据库失败，写入文本日志
+                    Write(errorMessage, level); // 写入数据库失败，写入文本日志
                 }
             }
             catch (Exception ex)
@@ -156,103 +153,12 @@ namespace HongYang.Enterprise.Logging
         /// </summary>
         /// <param name="log">记录信息</param>
         /// <param name="level">log等级</param>
-        public static Task WriteDbTask<T>(T log, LogLevel level = LogLevel.Error)
+        public static Task WriteDbTask<T>(T log, LogLevel level = LogLevel.Error) where T : class, new()
         {
             return Task.Run(() =>
             {
                 WriteDb(log, level);
             });
-        }
-
-        /// <summary>
-        /// 写登陆日志
-        /// </summary>
-        /// <param name="log">日志实体</param>
-        public static void WriteLoginLog(EPLogLoginEntity log)
-        {
-            WriteDb(log);
-        }
-
-        /// <summary>
-        /// 写登陆日志（异步）
-        /// </summary>
-        /// <param name="log">日志实体</param>
-        public static Task WriteLoginLogOutTask(EPLogLoginEntity log)
-        {
-            return WriteDbTask(log);
-        }
-
-        /// <summary>
-        /// 写消息日志
-        /// </summary>
-        /// <param name="log">日志实体</param>
-        public static void WriteMessageLog(EPLogMessageEntity log)
-        {
-            WriteDb(log);
-        }
-
-        /// <summary>
-        /// 写消息日志（异步）
-        /// </summary>
-        /// <param name="log">日志实体</param>
-        public static Task WriteMessageLogTask(EPLogMessageEntity log)
-        {
-            return WriteDbTask(log);
-        }
-
-        /// <summary>
-        /// 写修改日志
-        /// </summary>
-        /// <param name="log">日志实体</param>
-        public static void WriteModfiyLog(EPLogModifyEntity log)
-        {
-            WriteDb(log);
-        }
-
-        /// <summary>
-        /// 写修改日志（异步）
-        /// </summary>
-        /// <param name="log">日志实体</param>
-        public static Task WriteModfiyLogTask(EPLogModifyEntity log)
-        {
-            return WriteDbTask(log);
-        }
-
-        /// <summary>
-        /// 写操作日志
-        /// </summary>
-        /// <param name="log">日志实体</param>
-        public static void WriteOperator(EPLogUserOPEntity log)
-        {
-            WriteDb(log);
-        }
-
-        /// <summary>
-        /// 写操作日志（异步）
-        /// 写操作日志（异步）
-        /// </summary>
-        /// <param name="log">日志实体</param>
-        public static Task WriteOperatorTask(EPLogUserOPEntity log)
-        {
-            return WriteDbTask(log);
-        }
-
-        /// <summary>
-        /// 写任务发送日志
-        /// </summary>
-        /// <param name="log">日志实体</param>
-        public static void WriteTaskSendLog(EPLogTaskSendEntity log)
-        {
-            WriteDb(log);
-        }
-
-        /// <summary>
-        /// 写任务发送日志（异步）
-        /// </summary>
-        /// <param name="log">日志实体</param>
-        public static Task WriteTaskSendLogAsync(EPLogTaskSendEntity log)
-        {
-            return WriteDbTask(log);
         }
 
         /// <summary>

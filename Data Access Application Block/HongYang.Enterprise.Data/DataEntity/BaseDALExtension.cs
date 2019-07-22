@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using HongYang.Enterprise.Logging;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -110,6 +111,24 @@ namespace HongYang.Enterprise.Data.DataEntity
             }
             dataTable.EndLoadData();
             return dataTable;
+        }
+
+        /// <summary>
+        /// DAL中异常处理
+        /// </summary>
+        /// <param name="exception"></param>
+        /// <param name="errorMsg"></param>
+        /// <param name="track"></param>
+        /// <param name="methodName"></param>
+        public static void DALExceptionHandler(this Exception exception, Msg errorMsg, DBTrack track, string methodName)
+        {
+            errorMsg.Result = false;
+            errorMsg.AddMsg(exception.Message);
+            if (track == DBTrack.Open)
+            {
+                LogHelper.Write($"执行{methodName}方法异常。\n" + exception.Message);
+            }
+
         }
     }
 }

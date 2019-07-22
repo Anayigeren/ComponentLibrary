@@ -6,7 +6,7 @@ using System.Text;
 namespace HongYang.Enterprise.Data.DataEntity
 {
     /// <summary>
-    /// ORACLE数据分页帮助类
+    /// 数据分页帮助类
     /// </summary>
     public class PageHelper
     {
@@ -28,15 +28,15 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <summary>
         /// 返回查询语句
         /// </summary>
-        /// <param name="tableName"></param>
-        /// <param name="field"></param>
-        /// <param name="filter"></param>
-        /// <param name="orderBy"></param>
+        /// <param name="tableName">表名 eg: tb_student</param>
+        /// <param name="field">查询字段 eg: id,name,age</param>
+        /// <param name="filter">where后面的条件语句</param>
+        /// <param name="orderBy">order by后面的排序语句</param>
         /// <returns></returns>
         public static string PageSQL(string tableName, string field = "*", string filter = "", string orderBy = "")
         {
             orderBy = string.IsNullOrWhiteSpace(orderBy) ? string.Empty : $"order by {orderBy}";
-            return $"select {field} from {tableName} where 1=1 {filter} {orderBy}";
+            return $"select {field} from {tableName} where {filter} {orderBy}";
         }
 
         /// <summary>

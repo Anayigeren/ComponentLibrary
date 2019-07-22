@@ -46,24 +46,24 @@ namespace HongYang.Enterprise.Data.AdoNet
                 t = Type.GetType(dbConfig.provide, false);
             }
 
-            if(t == null || dbConfig.provide == "HongYang.Enterprise.Data.AdoNet.MySQL")
-            {
-                var path = "";
-                //if (HttpContext.Current != null)
-                //{
-                //    path = HttpRuntime.AppDomainAppPath + "bin\\HongYang.Enterprise.Data.MySQL.dll";
-                //}
-                //else
-                //{
-                //    path = AppDomain.CurrentDomain.BaseDirectory + "HongYang.Enterprise.Data.MySQL.dll";
-                //}
+            //if(t == null || dbConfig.provide == "HongYang.Enterprise.Data.AdoNet.MySQL")
+            //{
+            //    var path = "";
+            //    //if (HttpContext.Current != null)
+            //    //{
+            //    //    path = HttpRuntime.AppDomainAppPath + "bin\\HongYang.Enterprise.Data.MySQL.dll";
+            //    //}
+            //    //else
+            //    //{
+            //    //    path = AppDomain.CurrentDomain.BaseDirectory + "HongYang.Enterprise.Data.MySQL.dll";
+            //    //}
 
-                Assembly assembly = Assembly.LoadFile(path);
-                if(null != assembly)
-                {
-                    t = assembly.GetType(dbConfig.provide);
-                }
-            }
+            //    Assembly assembly = Assembly.LoadFile(path);
+            //    if(null != assembly)
+            //    {
+            //        t = assembly.GetType(dbConfig.provide);
+            //    }
+            //}
 
             if (t == null)
                 throw new Exception("无法实例化" + dbConfig.provide);

@@ -9,7 +9,7 @@ namespace HongYang.Enterprise.Data
     public class OraclePageSql : IPageSql
     {
         /// <summary>
-        /// 通用分页sql，QuerySql不为空以QuerySql为准
+        /// ORACLE分页sql，QuerySql不为空以QuerySql为准
         /// </summary>
         /// <param name="page"></param>
         /// <param name="query"></param>

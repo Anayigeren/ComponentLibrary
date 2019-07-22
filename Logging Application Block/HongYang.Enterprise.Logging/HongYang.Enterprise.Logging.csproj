@@ -38,6 +38,7 @@
       <HintPath>..\..\packages\Oracle.ManagedDataAccess.19.3.1\lib\net40\Oracle.ManagedDataAccess.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -47,17 +48,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Helpers\ApplicationHelper.cs" />
     <Compile Include="ILogAppenderHelper.cs" />
     <Compile Include="LogHelper.cs" />
     <Compile Include="LogLevel.cs" />
-    <Compile Include="Models\EPLogLoginEntity.cs" />
-    <Compile Include="Models\EPLogMessageEntity.cs" />
-    <Compile Include="Models\EPLogModifyEntity.cs" />
-    <Compile Include="Models\EPLogTaskBusinessEntity.cs" />
-    <Compile Include="Models\EPLogTaskSendEntity.cs" />
-    <Compile Include="Models\EPLogUserOPEntity.cs" />
-    <Compile Include="Models\LogEntity.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

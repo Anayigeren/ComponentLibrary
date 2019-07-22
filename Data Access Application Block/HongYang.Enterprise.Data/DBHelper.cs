@@ -1,22 +1,23 @@
 ﻿using System;
 using System.Data;
+using System.Reflection;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.IO;
 using HongYang.Enterprise.Data.AdoNet;
 using HongYang.Enterprise.Logging;
-using System.Reflection;
-using Oracle.ManagedDataAccess.Client;
 using HongYang.Enterprise.Data.DataEntity;
 using Dapper;
-using System.Collections;
 
+/// <summary>
+/// 创 建 人：林志斌
+/// 创建时间：2019/07/22
+/// 功    能：数据库操作帮组类，基于Dapper封装
+/// </summary>
 namespace HongYang.Enterprise.Data
 {
     /// <summary>
     /// 数据操作帮助类
-    /// 可以封装
-    /// 使用部分类允许其他DLL 来扩展DBHelper
+    /// 可以封装使用部分类允许其他一些类扩展DBHelper
     /// </summary>
     [Serializable]
     public partial class DBHelper
@@ -31,7 +32,6 @@ namespace HongYang.Enterprise.Data
         /// 将所有堆栈函数，全部记录下来
         /// </summary>
         public static int _traceDBRowLength = 5000;
-
 
         #region SqlHelper
         /// <summary>
@@ -53,19 +53,21 @@ namespace HongYang.Enterprise.Data
         /// <param name="sql">sql语句</param>
         /// <param name="param">动态替换参数</param>
         /// <param name="dataBaseName">连接名称</param>
+        /// <param name="track">是否记录本地日志</param>
         /// <returns></returns>
         public static DataSet SqlHelper(
             string sql,
             dynamic param,
             string dataBaseName,
-            Msg msg = null)
+            Msg msg = null,
+            DBTrack track = DBTrack.Open)
         {
             try
             {
                 msg = msg ?? new Msg();
                 Database db = DatabaseFactory.GetDatabase(dataBaseName);
                 string returnMessage = string.Empty;
-                var data = SqlHelper(sql, param, dataBaseName, ref returnMessage);
+                var data = SqlHelper(sql, param, dataBaseName, ref returnMessage, track);
                 msg.AddMsg(returnMessage);
                 msg.Result = data != null;
                 return data;
@@ -110,7 +112,8 @@ namespace HongYang.Enterprise.Data
                 returnMessage = ex.Message;
                 if (track == DBTrack.Open)
                 {
-                    LogHelper.Write("SqlHelper方法异常：\n" + ex.Message + $"{StackTraceLog.GetStackTraceLog().ToString()}");
+                    LogHelper.Write("DBHelper.SqlHelper方法异常：\n" + ex.Message 
+                        + $"{StackTraceLog.GetStackTraceLog().ToString()}");
                 }
             }
 
@@ -138,6 +141,7 @@ namespace HongYang.Enterprise.Data
             {
                 returnMessage = ex.Message;
             }
+
             return null;
         }
 
@@ -192,7 +196,8 @@ namespace HongYang.Enterprise.Data
             catch (Exception ex)
             {
                 msg.Result = false;
-                msg.AddMsg("sqlText:" + sqlText + "\n" + ex.Message + StackTraceLog.GetStackTraceLog().ToString());
+                msg.AddMsg("执行DBHelper.SqlHelper()方法异常。sqlText:" + sqlText + "\n" 
+                    + ex.Message + StackTraceLog.GetStackTraceLog().ToString());
                 if (track == DBTrack.Open)
                     LogHelper.Write("sqlText:" + sqlText + "\n" + ex.ToString() + StackTraceLog.GetStackTraceLog().ToString());
             }
@@ -285,7 +290,7 @@ namespace HongYang.Enterprise.Data
         /// </summary>
         /// <param name="sqlText">执行SQL语句</param>
         /// <param name="parameter">动态参数</param>
-        /// <param name="dataBaseName">连接数据名</param>
+        /// <param name="dataBaseName">连接名称</param>
         /// <param name="msg">返回消息</param>
         /// <param name="track">是否日志跟踪</param>
         /// <param name="tran"></param>
@@ -435,7 +440,45 @@ namespace HongYang.Enterprise.Data
             try
             {
                 Database db = DatabaseFactory.GetDatabase(dataBaseName);
-                db.ExecuteScalar(sqlText, (object)param, tran, cmdTimeout, cmdType);
+                return db.ExecuteScalar(sqlText, (object)param, tran, cmdTimeout, cmdType);
+            }
+            catch (Exception ex)
+            {
+                returnMessage = ex.Message;
+                if (track == DBTrack.Open)
+                {
+                    LogHelper.Write("sqlText:" + sqlText + "\n" + ex.ToString() + StackTraceLog.GetStackTraceLog().ToString());
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 返回单个值
+        /// </summary>
+        /// <param name="sqlText">sql语句</param>
+        /// <param name="param">匿名对象的参数，可以简单写，比如 new {Name="user1"} 即可，会统一处理参数和参数的size</param>
+        /// <param name="dataBaseName">连接名称</param>
+        /// <param name="returnMessage">返回错误消息</param>
+        /// <param name="track">是否日志跟踪</param>
+        /// <param name="tran">事务</param>
+        /// <param name="cmdTimeout">超时时间</param>
+        /// <param name="cmdType">命令方式</param>
+        public static IDataReader ExecuteReader(
+            string sqlText,
+            dynamic param,
+            string dataBaseName,
+            ref string returnMessage,
+            DBTrack track = DBTrack.Open,
+            IDbTransaction tran = null,
+            int? cmdTimeout = DEFAULTTIMEOUT,
+            CommandType cmdType = CommandType.Text)
+        {
+            try
+            {
+                Database db = DatabaseFactory.GetDatabase(dataBaseName);
+                return db.ExecuteReader(sqlText, (object)param, tran, cmdTimeout, cmdType);
             }
             catch (Exception ex)
             {
@@ -570,370 +613,167 @@ namespace HongYang.Enterprise.Data
             return 0;
         }
 
+        #region 开放Dapper的一些操作
         /// <summary>
-        /// 给SQL命令绑定参数
+        /// 获取dynamic列表，常用在只查询部分字段
+        /// eg: QueryDynamic(("select Id,Name from TbUser where Id = : Id", new { Id = 10 });
         /// </summary>
-        /// <param name="dbCommand"></param>
-        /// <param name="parameters"></param>
-        private static void AttachParameters(IDbCommand dbCommand, IDataParameter[] parameters)
-        {
-            if (dbCommand == null) throw new ArgumentNullException("dbCommand", "无效的SQL命令");
-
-            if (parameters != null)
-            {
-                foreach (IDataParameter param in parameters)
-                {
-                    if (!System.Text.RegularExpressions.Regex.IsMatch(dbCommand.CommandText, string.Format(@"(:\b{0}\b)+", param.ParameterName), System.Text.RegularExpressions.RegexOptions.Multiline))
-                    {
-                        continue;
-                    }
-
-                    if (param.Value == null
-                        && (param.Direction == ParameterDirection.Input || param.Direction == ParameterDirection.InputOutput))
-                        param.Value = DBNull.Value;
-
-                    dbCommand.Parameters.Add(param);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 给SQL命令绑定参数
-        /// </summary>
-        /// <param name="dbCommand"></param>
-        /// <param name="parameters"></param>
-        private static void BindParameters(IDbCommand dbCommand, object[] parameters)
-        {
-            if (dbCommand == null)
-                throw new ArgumentNullException("dbCommand", "无效的SQL命令");
-
-            if (parameters != null)
-            {
-                IDataParameter[] cmdParameters = AssignParameterValues(parameters);
-                foreach (IDataParameter param in cmdParameters)
-                {
-                    if (param.Value == null &&
-                        (param.Direction == ParameterDirection.Input ||
-                         param.Direction == ParameterDirection.InputOutput))
-                        param.Value = DBNull.Value;
-
-                    dbCommand.Parameters.Add(param);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 按SQL命令的参数顺序和参数值类型指定其参数值
-        /// </summary>
-        /// <param name="paramValues"></param>
-        private static IDataParameter[] AssignParameterValues(object[] paramValues)
-        {
-            if (paramValues == null)
-                return null;
-            IDataParameter[] cmdParameters = new IDataParameter[paramValues.Length];
-            for (int i = 0; i < cmdParameters.Length; i++)
-            {
-                if (paramValues[i] is IDataParameter)
-                {
-                    cmdParameters[i] = (IDataParameter)paramValues[i];
-                    if (((IDataParameter)paramValues[i]).Value == null)
-                    {
-                        cmdParameters[i].Value = DBNull.Value;
-                    }
-                    else
-                        cmdParameters[i].Value = ((IDataParameter)paramValues[i]).Value;
-                }
-                else if (paramValues[i] == null)
-                {
-                    cmdParameters[i].Value = DBNull.Value;
-                }
-                else
-                {
-                    cmdParameters[i].Value = paramValues[i];
-                }
-            }
-            return cmdParameters;
-        }
-
-        #region 执行用于保存BLOB二进制数据记录的方法
-        // 作者:黄兴
-        // 日期:2005.08.04
-        // 修订说明:初始创建。
-        /// <summary>
-        /// 执行用于保存BLOB二进制数据记录的方法
-        /// </summary>
-        /// <param name="stream">需要保存的流</param>
-        /// <param name="cmdType">SQL命令类型（SQL语句或存储过程），参见<see cref="CommandType"/>。</param>
-        /// <param name="sTable">数据表名</param>
-        /// <param name="sBlobField">所要保存的Bolb字段名</param>
-        /// <param name="sIDName">关键索引字段</param>
-        /// <param name="sIDValue">关键索引字段值</param>
-        /// <returns>返回bool类型，成功-True，失败-False。</returns>
-        public static bool StreamToBlob(ref Stream stream, CommandType cmdType,
-            string sTable, string sBlobField, string sIDName, string sIDValue, string dataBaseName, Msg msg = null)
-        {
-            msg = msg ?? new Msg();
-            Database db = DatabaseFactory.GetDatabase(dataBaseName);
-
-            #region 参数判断
-            if (stream == null) throw new ArgumentNullException("stream", "无效的数据流对象");
-            if (sTable == null) throw new ArgumentNullException("stream", "无效的数据表名");
-            if (sBlobField == null) throw new ArgumentNullException("stream", "无效的二进制流字段名");
-            if (sIDName == null) throw new ArgumentNullException("stream", "无效的主键名");
-            if (sIDValue == null) throw new ArgumentNullException("stream", "无效的主键值");
-            #endregion
-
-            DataSet dataSet = null;
-
-            using (IDbCommand cmd = db.GetDBCommand(db.dbConn))
-            {
-                cmd.CommandType = cmdType;
-
-                IDbDataAdapter dataAdapter = db.GetDataAdapter(cmd);
-
-                byte[] buff = null;
-                DataRow row = null;
-                int iRtn = 0;
-                string sSQL = String.Format("SELECT * FROM {0} WHERE {1} = '{2}'", sTable, sIDName, sIDValue);
-
-                cmd.CommandText = sSQL;
-                dataAdapter.SelectCommand = cmd;
-                AttachParameters(cmd, (IDataParameter[])null);
-                try
-                {
-                    //adapter = new OdbcDataAdapter( sSQL, conn );				
-                    dataAdapter.MissingSchemaAction = MissingSchemaAction.AddWithKey;
-                    dataSet = new DataSet(sTable);
-
-                    OracleCommandBuilder builder = new OracleCommandBuilder((OracleDataAdapter)dataAdapter);
-
-                    dataAdapter.Fill(dataSet);
-
-                    if (0 == dataSet.Tables[0].Rows.Count)
-                    {
-                        return false;
-                    }
-
-                    row = dataSet.Tables[0].Rows[0];
-                    buff = new byte[stream.Length];
-                    stream.Position = 0;
-                    stream.Read(buff, 0, System.Convert.ToInt32(stream.Length));
-
-
-                    row[sBlobField] = buff;
-                    iRtn = dataAdapter.Update(dataSet);
-                }
-                catch (Exception ee)
-                {
-                    string err = ee.Message.ToString();
-                    buff = null;
-                }
-                finally
-                {
-                    if (dataSet != null)
-                        dataSet.Dispose();
-                }
-                if (buff == null || iRtn == 0)
-                    return false;
-            }
-            return true;
-        }
-        #endregion
-
-        #region 执行用于读取BLOB二制数据记录的方法
-        // 作者:黄兴
-        // 日期:2005.08.04
-        // 修订说明:初始创建。
-        /// <summary>
-        /// 执行用于读取BLOB二制数据记录的方法
-        /// </summary>
-        /// <param name="stream">返回的流数据</param>
-        /// <param name="cmdType">SQL命令类型（SQL语句或存储过程），参见<see cref="CommandType"/>。</param>
-        /// <param name="sTable">数据表名</param>
-        /// <param name="sBlobField">所要保存的Bolb字段名</param>
-        /// <param name="sIDName">关键索引字段</param>
-        /// <param name="sIDValue">关键索引字段值</param>
-        /// <returns>返回bool类型，成功-True，失败-False。</returns>
-        public static bool BlobToStream(ref Stream stream, CommandType cmdType, string sTable,
-            string sBlobField, string sIDName, string sIDValue, string dataBaseName, Msg msg = null)
-        {
-            msg = msg ?? new Msg();
-            Database db = DatabaseFactory.GetDatabase(dataBaseName);
-            #region 参数判断
-            if (sTable == null) throw new ArgumentNullException("stream", "无效的数据表名");
-            if (sBlobField == null) throw new ArgumentNullException("stream", "无效的二进制流字段名");
-            if (sIDName == null) throw new ArgumentNullException("stream", "无效的主键名");
-            if (sIDValue == null) throw new ArgumentNullException("stream", "无效的主键值");
-            #endregion
-
-            string sSQL = String.Format("SELECT * FROM {0} WHERE {1} = '{2}'", sTable, sIDName, sIDValue);
-
-            DataSet dataSet = null;
-
-            using (IDbCommand cmd = db.GetDBCommand(db.dbConn))
-            {
-                cmd.CommandType = cmdType;
-
-                IDbDataAdapter dataAdapter = db.GetDataAdapter(cmd);
-
-                DataRow row = null;
-                byte[] buff = new byte[0];
-                bool bRtn = true;
-
-                try
-                {
-                    cmd.CommandText = sSQL;
-                    dataAdapter.SelectCommand = cmd;
-                    AttachParameters(cmd, (IDataParameter[])null);
-
-                    dataAdapter.MissingSchemaAction = MissingSchemaAction.AddWithKey;
-                    dataSet = new DataSet(sTable);
-
-                    OracleCommandBuilder builder = new OracleCommandBuilder((OracleDataAdapter)dataAdapter);
-
-                    dataAdapter.Fill(dataSet);
-
-                    if (0 == dataSet.Tables[0].Rows.Count)
-                    {
-                        return false;
-                    }
-
-                    row = dataSet.Tables[0].Rows[0];
-                    if (null == row)
-                        return false;
-
-                    buff = (byte[])row[sBlobField];
-
-                    stream.Write(buff, 0, buff.GetUpperBound(0) + 1);
-                }
-                catch (Exception ee)
-                {
-                    string err = ee.Message.ToString();
-                    bRtn = false;
-                }
-                finally
-                {
-                    if (dataSet != null)
-                        dataSet.Dispose();
-                }
-                return bRtn;
-            }
-        }
-        #endregion
-
-        #region 取当前序列,条件为seq.nextval或seq.currval
-        /// 
-        /// 取当前序列
-        public static decimal GetSeq(string seqName, string dataBaseName, Msg msg = null)
-        {
-            string sql = "";
-            try
-            {
-                msg = msg ?? new Msg();
-                decimal seqnum = 0;
-                sql = "select " + seqName + ".nextval from dual";
-                Database db = DatabaseFactory.GetDatabase(dataBaseName);
-                DataSet data = db.ExecuteDataSet(sql, CommandType.Text, null);
-                //  CloseConn();
-                if (null != data && 0 < data.Tables[0].Rows.Count)
-                {
-                    return Convert.ToDecimal(data.Tables[0].Rows[0][0]);
-                }
-                return seqnum;
-            }
-            catch (Exception ex)
-            {
-                msg.Result = false;
-                msg.AddMsg("sqlText:" + sql + "\n" + ex.Message + StackTraceLog.GetStackTraceLog().ToString());
-                LogHelper.Write("sqlText:" + sql + "\n" + ex.ToString() + StackTraceLog.GetStackTraceLog().ToString());
-            }
-            return 0;
-        }
-
-        /// <summary>
-        /// 执行存储过程
-        /// </summary>
-        /// <param name="procudurnName"></param>
-        /// <param name="parameters"></param>
-        /// <param name="dataBaseName"></param>
-        /// <param name="returnMessage"></param>
-        public static void ExecuteProcedure(string procudurnName, object[] parameters, string dataBaseName, ref string returnMessage)
+        /// <param name="sqlText">sql语句 eg: select Id,Name from TbUser where Id = : Id</param>
+        /// <param name="param">匿名对象的参数，可以简单写，比如 new {Name="user1"} 即可，会统一处理参数和参数的size</param>
+        /// <param name="dataBaseName">连接名称</param>
+        /// <param name="returnMessage">返回错误消息</param>
+        /// <param name="track">是否日志跟踪</param>
+        /// <param name="buffered">默认值改为true，一次性取完断开连接,如果想自行一笔一笔取，可设置为false</param>
+        /// <param name="cmdTimeout">超时时间(默认60s)</param>
+        /// <param name="cmdType">命令方式</param>
+        public static IEnumerable<dynamic> QueryDynamics(
+            string sqlText,
+            dynamic param,
+            string dataBaseName,
+            ref string returnMessage,
+            DBTrack track = DBTrack.Open,
+            bool buffered = true,
+            int? cmdTimeout = DEFAULTTIMEOUT,
+            CommandType cmdType = CommandType.Text)
         {
             try
             {
                 Database db = DatabaseFactory.GetDatabase(dataBaseName);
-                if (db == null)
-                {
-                    returnMessage = "连接数据库失败！";
-                }
-
-                if (procudurnName == null || procudurnName.Trim() == "")
-                {
-                    returnMessage = "传入的存储过程名为空！";
-                }
-                if (parameters == null)
-                {
-                    returnMessage = "传入的存储过程参数为空！";
-                }
-
-                db.ExecuteNonQuery(procudurnName, parameters, null, DEFAULTTIMEOUT, CommandType.StoredProcedure);
+                return db.QueryDynamics(sqlText, (object)param, buffered, cmdTimeout, cmdType);
             }
             catch (Exception ex)
             {
-                returnMessage = "执行存储过程" + procudurnName + "失败！" + ex.ToString();
+                returnMessage = ex.Message;
+                if (track == DBTrack.Open)
+                {
+                    LogHelper.Write("执行QueryDynamics异常，sqlText:" + sqlText + "\n" + ex.ToString() 
+                        + StackTraceLog.GetStackTraceLog().ToString());
+                }
             }
+
+            return null;
         }
 
         /// <summary>
-        /// 执行存储过程(外部Connection)
+        /// 查询多个dynamic列表结果集， 方便查询分页列表数据，同时统计总数
+        /// eg: QueryMultipleDynamic(("select Id,Name from User where Id =:Id; select * from Order;", new { Id = 10 });
         /// </summary>
-        /// <param name="procudurnName"></param>
-        /// <param name="parameters"></param>
-        /// <param name="dataBaseName"></param>
-        /// <param name="returnMessage"></param>
-        public static void ExecuteProcedure(string procudurnName, object[] parameters, IDbConnection dbconn, ref string returnMessage)
+        /// <param name="sqlText">多个sql语句,语句以分号结束 eg: select Id,Name from User where Id =: Id; select * from Order;</param>
+        /// <param name="param">匿名对象的参数，可以简单写，比如 new {Name="user1"} 即可，会统一处理参数和参数的size</param>
+        /// <param name="dataBaseName">连接名称</param>
+        /// <param name="returnMessage">返回错误消息</param>
+        /// <param name="track">是否日志跟踪</param>
+        /// <param name="tran"></param>
+        /// <param name="cmdTimeout">超时时间(默认60s)</param>
+        /// <param name="cmdType">命令方式</param>
+        public static List<List<dynamic>> QueryMultipleDynamic(
+            string sqlText,
+            dynamic param,
+            string dataBaseName,
+            ref string returnMessage,
+            DBTrack track = DBTrack.Open,
+            IDbTransaction tran = null,
+            int? cmdTimeout = DEFAULTTIMEOUT,
+            CommandType cmdType = CommandType.Text)
         {
             try
             {
-                if (dbconn == null)
-                {
-                    returnMessage = "连接数据库失败！";
-                }
-                ConnectionState state = dbconn.State;
-                if (ConnectionState.Open != state)
-                    dbconn.Open();
-
-                if (procudurnName == null || procudurnName.Trim() == "")
-                {
-                    returnMessage = "传入的存储过程名为空！";
-                }
-                if (parameters == null)
-                {
-                    returnMessage = "传入的存储过程参数为空！";
-                }
-
-                using (IDbCommand cmd = dbconn.CreateCommand())
-                {
-                    cmd.CommandText = procudurnName;
-                    cmd.CommandType = CommandType.StoredProcedure;
-                    BindParameters(cmd, parameters);
-                    var ret = cmd.ExecuteNonQuery() > 0;
-                    if (!ret)
-                    {
-                        returnMessage = "执行存储过程" + procudurnName + "失败！";
-                    }
-                }
-                //db.ExecuteNonQuery(procudurnName, CommandType.StoredProcedure, parameters);
+                Database db = DatabaseFactory.GetDatabase(dataBaseName);
+                return db.QueryMultipleDynamic(sqlText, (object)param, tran, cmdTimeout, cmdType);
             }
             catch (Exception ex)
             {
-                returnMessage = "执行存储过程" + procudurnName + "失败！" + ex.ToString();
+                returnMessage = ex.Message;
+                if (track == DBTrack.Open)
+                {
+                    LogHelper.Write("执行QueryMultipleDynamic异常，sqlText:" + sqlText + "\n" + ex.ToString()
+                        + StackTraceLog.GetStackTraceLog().ToString());
+                }
             }
-            finally
+
+            return null;
+        }
+
+        /// <summary>
+        /// 获取Hashtable列表，可以方便转为json对象
+        /// (注意：类似count(*)要给字段名，比如 select count(*) as recordCount from TbUser。)
+        /// eg: QueryHashtables(("select Id,Name from TbUser where Id = : Id", new { Id = 10 });
+        /// </summary>
+        /// <param name="sqlText">多个sql语句以分号相隔 eg: select Id,Name from TbUser where Id =: Id; select * from TbOrder</param>
+        /// <param name="param">匿名对象的参数，可以简单写，比如 new {Name="user1"} 即可，会统一处理参数和参数的size</param>
+        /// <param name="dataBaseName">连接名称</param>
+        /// <param name="returnMessage">返回错误消息</param>
+        /// <param name="track">是否日志跟踪</param>
+        /// <param name="buffered">默认值改为true，一次性取完断开连接,如果想自行一笔一笔取，可设置为false</param>
+        /// <param name="cmdTimeout">超时时间(默认60s)</param>
+        /// <param name="cmdType">命令方式</param>
+        public static List<Hashtable> QueryHashtables(
+            string sqlText,
+            dynamic param,
+            string dataBaseName,
+            ref string returnMessage,
+            DBTrack track = DBTrack.Open,
+            bool buffered = true,
+            int? cmdTimeout = DEFAULTTIMEOUT,
+            CommandType cmdType = CommandType.Text)
+        {
+            try
             {
-                if (null != dbconn)
-                    dbconn.Close();
+                Database db = DatabaseFactory.GetDatabase(dataBaseName);
+                return db.QueryHashtables(sqlText, (object)param, buffered, cmdTimeout, cmdType);
             }
+            catch (Exception ex)
+            {
+                returnMessage = ex.Message;
+                if (track == DBTrack.Open)
+                {
+                    LogHelper.Write("执行QueryHashtables异常，sqlText:" + sqlText + "\n" + ex.ToString()
+                        + StackTraceLog.GetStackTraceLog().ToString());
+                }
+            }
+
+            return null;
+        }
+
+
+        /// <summary>
+        /// 获取多个Hashtable列表结果集， 可以方便转为json对象 (注意：类似count(*)要给字段名，比如 select count(*) as recordCount from TbUser。)
+        /// eg: QueryMultipleHashtables(("select Id,Name from TbUser where Id =: Id;select count(*) as recordCount from TbUser", new { Id = 10 });
+        /// </summary>
+        /// <param name="sqlText">多个sql语句以分号相隔 eg: select Id,Name from TbUser where Id =: Id;select * from TbOrder</param>
+        /// <param name="param">匿名对象的参数，可以简单写，比如 new {Name="user1"} 即可，会统一处理参数和参数的size</param>
+        /// <param name="dataBaseName">连接名称</param>
+        /// <param name="returnMessage">返回错误消息</param>
+        /// <param name="track">是否日志跟踪</param>
+        /// <param name="tran">默认值改为true，一次性取完断开连接,如果想自行一笔一笔取，可设置为false</param>
+        /// <param name="cmdTimeout">超时时间(默认60s)</param>
+        /// <param name="cmdType">命令方式</param>
+        public static List<List<Hashtable>> QueryMultipleHashtables(
+            string sqlText,
+            dynamic param,
+            string dataBaseName,
+            ref string returnMessage,
+            DBTrack track = DBTrack.Open,
+            IDbTransaction tran = null,
+            int? cmdTimeout = DEFAULTTIMEOUT,
+            CommandType cmdType = CommandType.Text)
+        {
+            try
+            {
+                Database db = DatabaseFactory.GetDatabase(dataBaseName);
+                return db.QueryMultipleHashtables(sqlText, (object)param, tran, cmdTimeout, cmdType);
+            }
+            catch (Exception ex)
+            {
+                returnMessage = ex.Message;
+                if (track == DBTrack.Open)
+                {
+                    LogHelper.Write("执行QueryHashtables异常，sqlText:" + sqlText + "\n" + ex.ToString()
+                        + StackTraceLog.GetStackTraceLog().ToString());
+                }
+            }
+
+            return null;
         }
         #endregion
 
@@ -943,30 +783,40 @@ namespace HongYang.Enterprise.Data
         /// </summary>
         /// <param name="entity"></param>
         /// <returns></returns>
-        public static DynamicParameters CreateDataDynamicParameters<T>(T entity)
+        public static DynamicParameters CreateDataDynamicParameters<T>(T entity, DBTrack track = DBTrack.Open)
         {
             DynamicParameters parameters = new DynamicParameters();
-            PropertyInfo[] propertys = typeof(T).GetProperties();
-            foreach (PropertyInfo pi in propertys)
+            try
             {
-                if (pi.IsNoMapKey()
-                    || pi.Name.ToUpper().Contains("_MAX")
-                    || pi.Name.ToUpper().Contains("_MIN"))
+                PropertyInfo[] propertys = typeof(T).GetProperties();
+                foreach (PropertyInfo pi in propertys)
                 {
-                    // 过滤掉未映射字段、_MAX和_MIN字段
-                    continue;
-                }
+                    if (pi.IsNoMapKey()
+                        || pi.Name.ToUpper().Contains("_MAX")
+                        || pi.Name.ToUpper().Contains("_MIN"))
+                    {
+                        // 过滤掉未映射字段、_MAX和_MIN字段
+                        continue;
+                    }
 
-                object value = GetValue(pi.Name, entity);
-                if (value == null || string.IsNullOrEmpty(value.ToString()))
-                {
-                    parameters.Add(pi.Name, DBNull.Value);
+                    object value = GetValue(pi.Name, entity);
+                    if (value == null || string.IsNullOrEmpty(value.ToString()))
+                    {
+                        parameters.Add(pi.Name, DBNull.Value);
+                    }
+                    else
+                    {
+                        parameters.Add(pi.Name, value.ToString().FilterChar());
+                    }
                 }
-                else
-                {
-                    parameters.Add(pi.Name, value.ToString().FilterChar());
-                }
+                return parameters;
             }
+            catch (Exception ex)
+            {
+                if (track == DBTrack.Open)
+                    LogHelper.Write(ex.ToString() + StackTraceLog.GetStackTraceLog().ToString());
+            }
+
             return parameters;
         }
 

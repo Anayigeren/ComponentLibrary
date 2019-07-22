@@ -13,8 +13,9 @@ using HongYang.Enterprise.Data.AdoNet;
 namespace HongYang.Enterprise.Data.DataEntity
 {
     /// <summary>
-    /// 具体业务层，可以继承这个类
-    /// 在子类中，通过构造函数传入，数据库连接
+    /// 创 建 人：林志斌
+    /// 创建时间：2019/07/22
+    /// 功    能：Oracle实体对象的数据访问层，内部可创建数据库连接对象 来扩展Dapper的支持
     /// </summary>
     /// <typeparam name="T"></typeparam>
     [Serializable]
@@ -25,8 +26,20 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// </summary>
         public Msg error = new Msg();
 
-        protected string _dbName = "";
-        protected string _year = "";
+        /// <summary>
+        /// 数据库连接名称
+        /// </summary>
+        protected string _dbName = string.Empty;
+
+        /// <summary>
+        /// 带年份表的年份
+        /// </summary>
+        protected string _year = string.Empty;
+
+        /// <summary>
+        /// 是否开启日志跟踪（默认开启）
+        /// 调用DBHelper的方法不在DBHelper中写日志而交于本层来写，避免重复写日志，对数据库操作写日志
+        /// </summary>
         protected DBTrack _track = DBTrack.Open;
 
         /// <summary>
@@ -34,16 +47,10 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// </summary>
         readonly Type t = typeof(T);
 
-        public T entity
-        {
-            get;
-            set;
-        }
-
         /// <summary>
         /// 构造函数
         /// </summary>
-        /// <param name="dbName">连接名</param>
+        /// <param name="dbName">数据库连接名称</param>
         /// <returns></returns>
         public OracleDataEntityDAL(string dbName)
         {
@@ -53,7 +60,7 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <summary>
         /// 构造函数
         /// </summary>
-        /// <param name="dbName">连接名</param>
+        /// <param name="dbName">数据库连接名称</param>
         /// <param name="year">带年份表的年份</param>
         public OracleDataEntityDAL(string dbName, string year)
         {
@@ -64,9 +71,9 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <summary>
         /// 构造函数
         /// </summary>
-        /// <param name="dbName"></param>
-        /// <param name="track"></param>
-        /// <param name="year"></param>
+        /// <param name="dbName">数据库连接名称</param>
+        /// <param name="track">是否开启日志跟踪</param>
+        /// <param name="year">带年份表的年份</param>
         public OracleDataEntityDAL(string dbName, DBTrack track, string year = "")
         {
             _year = year;
@@ -75,7 +82,7 @@ namespace HongYang.Enterprise.Data.DataEntity
         }
 
         /// <summary>
-        /// 创建连接对象
+        /// 创建连接对象，开放一些Dapper提供的数据操作
         /// </summary>
         /// <returns></returns>
         protected override IDbConnection CreateConnection()
@@ -91,19 +98,18 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// 插入 entity 记录.
         /// </summary>
         /// <param name="entity">entity 类对象</param>
-        /// <param name="commandTimeout">执行时间</param>
+        /// <param name="commandTimeout">执行超时时间</param>
         /// <returns></returns>
         public virtual int Insert(T entity, IDbTransaction transaction = null, int commandTimeout = DEFAULTTIMEOUT)
         {
             try
             {
-                return DBHelper.ExecuteSQLHelper(InsertSQLByParameter(entity), entity, _dbName, error, DBTrack.Open, transaction, commandTimeout);
+                return DBHelper.ExecuteSQLHelper(
+                    InsertSQLByParameter(entity),entity, _dbName, error, DBTrack.Close, transaction, commandTimeout);
             }
             catch (Exception ex)
             {
-                error.Result = false;
-                error.AddMsg(ex.Message);
-                LogHelper.Write($"执行OracleDataEntityDAL.Insert({t.Name})失败。\n{ex.Message}");
+                ex.DALExceptionHandler(error, _track, $"OracleDataEntityDAL.Insert({t.Name})");
             }
 
             return 0;
@@ -113,7 +119,7 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// 批量插入 entity 记录.
         /// </summary>
         /// <param name="entityList">一组 entity 类对象</param>
-        /// <param name="commandTimeout">执行时间</param>
+        /// <param name="commandTimeout">执行超时时间</param>
         /// </summary>
         public virtual bool InsertList(List<T> entityList, int commandTimeout = DEFAULTTIMEOUT)
         {
@@ -131,13 +137,11 @@ namespace HongYang.Enterprise.Data.DataEntity
                     }
 
                     return true;
-                }, _dbName, error);
+                }, _dbName, error, DBTrack.Close);
             }
             catch(Exception ex)
             {
-                error.Result = false;
-                error.AddMsg(ex.Message);
-                LogHelper.Write($"执行OracleDataEntityDAL.InsertList()失败。\n{ex.Message}");
+                ex.DALExceptionHandler(error, _track, $"OracleDataEntityDAL.InsertList({t.Name})");
             }
 
             return false;
@@ -147,11 +151,11 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// 更新 entity 类对象
         /// </summary>
         /// <param name="entity">实体对象</param>
-        /// <param name="customSQL">条件sql</param>
+        /// <param name="customSQL">自定义条件sql</param>
         /// <param name="noUpdateFileds">排除更新字段</param>
         /// <param name="updateFileds">只更新的字段</param>
         /// <param name="transaction">事务</param>
-        /// <param name="commandTimeout">执行时间（默认1min）</param>
+        /// <param name="commandTimeout">执行超时时间（默认1min）</param>
         /// <returns></returns>
         public virtual int Update(T entity, string customSQL = "", List<string> noUpdateFileds = null, List<string> updateFileds = null, IDbTransaction transaction = null, int commandTimeout = DEFAULTTIMEOUT)
         {
@@ -160,13 +164,11 @@ namespace HongYang.Enterprise.Data.DataEntity
             {
                 ret = DBHelper.ExecuteSQLHelper(
                     UpdateSQLByParameter(entity, customSQL, noUpdateFileds, updateFileds), entity,
-                    _dbName, error, DBTrack.Open, transaction, commandTimeout);
+                    _dbName, error, DBTrack.Close, transaction, commandTimeout);
             }
             catch (Exception ex)
             {
-                error.Result = false;
-                error.AddMsg(ex.Message);
-                LogHelper.Write($"执行OracleDataEntityDAL.Update({t.Name})失败。\n{ex.Message}");
+                ex.DALExceptionHandler(error, _track, $"OracleDataEntityDAL.Update({t.Name})");
             }
 
             return ret;
@@ -176,7 +178,7 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// 批量插入 entity 记录.
         /// </summary>
         /// <param name="entityList">一组 entity 类对象</param>
-        /// <param name="commandTimeout">执行时间</param>
+        /// <param name="commandTimeout">执行超时时间</param>
         /// </summary>
         public virtual bool UpdateList(List<T> entityList, int commandTimeout = DEFAULTTIMEOUT)
         {
@@ -194,13 +196,11 @@ namespace HongYang.Enterprise.Data.DataEntity
                     }
 
                     return true;
-                }, _dbName, error);
+                }, _dbName, error, DBTrack.Close);
             }
             catch (Exception ex)
             {
-                error.Result = false;
-                error.AddMsg(ex.Message);
-                LogHelper.Write($"执行OracleDataEntityDAL.UpdateList()失败。\n{ex.Message}");
+                ex.DALExceptionHandler(error, _track, $"OracleDataEntityDAL.UpdateList({t.Name})");
             }
 
             return false;
@@ -210,15 +210,17 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// 根据主键值删除记录.
         /// </summary>
         /// <param name="id">主键值</param>
-        /// <param name="commandTimeout">执行时间</param>
+        /// <param name="commandTimeout">执行超时时间</param>
         /// <returns></returns>
-        public virtual int Delete(string id)
+        public virtual int Delete(string id, int commandTimeout = DEFAULTTIMEOUT)
         {
             int ret = 0;
             try
             {
                 string retMessage = string.Empty;
-                DBHelper.ExecuteSQLHelper(DeleteSQLByParameter(id, out DynamicParameters param), param, _dbName, ref retMessage);
+                ret = DBHelper.ExecuteSQLHelper(
+                    DeleteSQLByParameter(id, out DynamicParameters param),
+                    param, _dbName, ref retMessage, DBTrack.Close, null, commandTimeout);
                 if (ret == 0)
                 {
                     error.Result = false;
@@ -227,9 +229,7 @@ namespace HongYang.Enterprise.Data.DataEntity
             }
             catch (Exception ex)
             {
-                error.Result = false;
-                error.AddMsg(ex.Message);
-                LogHelper.Write($"执行OracleDataEntityDAL.Delete({t.Name})失败。\n{ex.Message}");
+                ex.DALExceptionHandler(error, _track, $"OracleDataEntityDAL.Delete({t.Name})");
             }
 
             return ret;
@@ -238,8 +238,8 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <summary>
         /// 批量删除
         /// </summary>
-        /// <param name="entityList"></param>
-        /// <param name="commandTimeout"></param>
+        /// <param name="idList">主键列表</param>
+        /// <param name="commandTimeout">执行超时时间</param>
         /// <returns></returns>
         public virtual bool DeleteList(List<string> idList, int commandTimeout = DEFAULTTIMEOUT)
         {
@@ -257,31 +257,31 @@ namespace HongYang.Enterprise.Data.DataEntity
                     }
 
                     return true;
-                }, _dbName, error);
+                }, _dbName, error, DBTrack.Close);
             }
             catch (Exception ex)
             {
-                error.Result = false;
-                error.AddMsg(ex.Message);
-                LogHelper.Write($"执行OracleDataEntityDAL.DeleteList()失败。\n{ex.Message}");
+                ex.DALExceptionHandler(error, _track, $"OracleDataEntityDAL.DeleteList({t.Name})");
             }
 
             return false;
         }
 
         /// <summary>
-        /// 批量执行与entity相关的SQL
+        /// 批量执行与entity相关的SQL，未使用参数化（待完善）
         /// </summary>
-        /// <param name="InsertList"></param>
-        /// <param name="UpdateList"></param>
-        /// <param name="DeleteList"></param>
-        /// <param name="SqlList"></param>
+        /// <param name="InsertList">插入实体列表</param>
+        /// <param name="UpdateList">更新实体列表</param>
+        /// <param name="DeleteList">删除实体列表</param>
+        /// <param name="SqlList">sql列表</param>
+        /// <param name="allowNull">是否允许0行影响</param>
         /// <returns></returns>
         public virtual bool TranscationExecute(
             List<T> InsertList,
             List<T> UpdateList,
             List<T> DeleteList,
-            List<string> SqlList)
+            List<string> SqlList,
+            bool allowNull = false)
         {
             bool ret = false;
             List<string> sqlArr = new List<string>();
@@ -317,13 +317,11 @@ namespace HongYang.Enterprise.Data.DataEntity
                     sqlArr.AddRange(SqlList);
                 }
 
-                ret = DBHelper.TranscationExecute(sqlArr, _dbName, error);
+                ret = DBHelper.TranscationExecute(sqlArr, _dbName, error, allowNull, DBTrack.Close);
             }
             catch (Exception ex)
             {
-                LogHelper.Write("执行OracleDataEntityDAL.TranscationExecute( " + t.Name + ")失败。\n" + ex.Message);
-                error.Result = false;
-                error.AddMsg(ex.Message);
+                ex.DALExceptionHandler(error, _track, $"OracleDataEntityDAL.TranscationExecute()");
             }
             return ret;
         }
@@ -331,11 +329,12 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <summary>
         /// 获取 entity 类对象.
         /// </summary>
-        /// <param name="baid">病案ID</param>
+        /// <param name="id">主键id，实体上标注[key]的字段值</param>
+        /// <param name="commandTimeout">执行超时时间</param>
         /// <returns></returns>
         public virtual T Load(string id, int commandTimeout = DEFAULTTIMEOUT)
         {
-            T entity = default(T);
+            T entity = default;
             var conn = CreateConnectionAndOpen();
             try
             {
@@ -345,9 +344,7 @@ namespace HongYang.Enterprise.Data.DataEntity
             }
             catch (Exception ex)
             {
-                LogHelper.Write("执行OracleDataEntityDAL.Load( " + t.Name + ")。\n" + ex.Message);
-                error.Result = false;
-                error.AddMsg(ex.Message);
+                ex.DALExceptionHandler(error, _track, $"OracleDataEntityDAL.Load({t.Name})");
             }
             finally
             {
@@ -374,23 +371,16 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <param name="dataPage">分页数据</param>
         /// <param name="commandTimeout">操作超时时间（秒）</param>
         /// <returns>DataTable</returns>
-        public virtual DataTable GetDataTable(T entity, string orderBy = "", DataPage dataPage = null)
+        public virtual DataTable GetDataTable(T entity, string orderBy = "", DataPage dataPage = null, int commandTimeout = DEFAULTTIMEOUT)
         {
-            var conn = CreateConnectionAndOpen();
             try
             {
                 string sqlstr = ListSQLByParameter(entity, out DynamicParameters param, orderBy, dataPage);
-                return DBHelper.SqlHelperGetDataTable(sqlstr, param, _dbName);
+                return DBHelper.SqlHelperGetDataTable(sqlstr, param, _dbName, error, DBTrack.Close, commandTimeout);
             }
             catch (Exception ex)
             {
-                LogHelper.Write("执行OracleDataEntityDAL.GetDataTable(( " + t.Name + ")失败。\n" + ex.Message);
-                error.Result = false;
-                error.AddMsg(ex.Message);
-            }
-            finally
-            {
-                conn.CloseIfOpen();
+                ex.DALExceptionHandler(error, _track, $"OracleDataEntityDAL.GetDataTable({t.Name})");
             }
 
             return null;
@@ -411,14 +401,11 @@ namespace HongYang.Enterprise.Data.DataEntity
             try
             {
                 string sqlstr = ListSQLByParameter(entity, out DynamicParameters param, orderBy, dataPage);
-
                 return conn.ExecuteReader(sqlstr, param, null, commandTimeout);
             }
             catch (Exception ex)
             {
-                LogHelper.Write("执行OracleDataEntityDAL.GetDataTable(( " + t.Name + ")失败。\n" + ex.Message);
-                error.Result = false;
-                error.AddMsg(ex.Message);
+                ex.DALExceptionHandler(error, _track, $"OracleDataEntityDAL.GetDataTable({t.Name})");
             }
             finally
             {
@@ -447,7 +434,7 @@ namespace HongYang.Enterprise.Data.DataEntity
             }
             catch (Exception ex)
             {
-                LogHelper.Write("执行OracleDataEntityDAL.List(( " + t.Name + "))失败。\n" + ex.Message);
+                ex.DALExceptionHandler(error, _track, $"OracleDataEntityDAL.List({t.Name})");
             }
             finally
             {
@@ -468,7 +455,7 @@ namespace HongYang.Enterprise.Data.DataEntity
         #endregion
 
 
-        #region  SQL语句生成
+        #region  SQL语句生成，异常直接抛
         /// <summary>
         /// 返回实体插入的SQL，生成参数化sql
         /// </summary>
@@ -522,7 +509,6 @@ namespace HongYang.Enterprise.Data.DataEntity
             }
             catch (Exception ex)
             {
-                LogHelper.Write($"执行OracleDataEntityDAL.InsertSQL({t.Name})失败。\n{ex.Message}");
                 throw ex;
             }
         }
@@ -578,7 +564,6 @@ namespace HongYang.Enterprise.Data.DataEntity
             }
             catch (Exception ex)
             {
-                LogHelper.Write($"执行OracleDataEntityDAL.InsertSQLByParameter({t.Name})失败。\n{ex.Message}");
                 throw ex;
             }
         }
@@ -656,57 +641,63 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <returns>sql</returns>
         public virtual string UpdateSQLByParameter(T entity, string customSQL = "", List<string> noUpdateFileds = null, List<string> updateFileds = null)
         {
-            string primaryKey = PrimaryKey(entity);
-            object pkvalue = GetValue(primaryKey, entity);
-            if (pkvalue == null)
-                throw new Exception($"主键{primaryKey}不能为空");
-            StringBuilder strValues = new StringBuilder();
-            PropertyInfo[] propertys = t.GetProperties();
-            foreach (PropertyInfo pi in propertys)
+            try
             {
-                if (pi.IsNoMapKey()
-                    || primaryKey.ToLower().Equals(pi.Name.ToLower())
-                    || pi.Name.ToUpper().Contains("_MAX")
-                    || pi.Name.ToUpper().Contains("_MIN"))
+                string primaryKey = PrimaryKey(entity);
+                object pkvalue = GetValue(primaryKey, entity);
+                if (pkvalue == null)
+                    throw new Exception($"主键{primaryKey}不能为空");
+                StringBuilder strValues = new StringBuilder();
+                PropertyInfo[] propertys = t.GetProperties();
+                foreach (PropertyInfo pi in propertys)
                 {
-                    // 未映射字段、主键、_MAX和_MIN做为查询关键字不做为更新字段，因此过滤掉
-                    continue;
+                    if (pi.IsNoMapKey()
+                        || primaryKey.ToLower().Equals(pi.Name.ToLower())
+                        || pi.Name.ToUpper().Contains("_MAX")
+                        || pi.Name.ToUpper().Contains("_MIN"))
+                    {
+                        // 未映射字段、主键、_MAX和_MIN做为查询关键字不做为更新字段，因此过滤掉
+                        continue;
+                    }
+
+                    if ((noUpdateFileds != null && noUpdateFileds.Contains(pi.Name))
+                        || (updateFileds != null && !updateFileds.Contains(pi.Name)))
+                    {
+                        // 排除不更新字段 或 不在指定更新字段
+                        continue;
+                    }
+
+                    object value = GetValue(pi.Name, entity);
+                    value = value == null || string.IsNullOrEmpty(value.ToString()) ? "" : value;
+                    if (pi.PropertyType == typeof(Nullable<DateTime>)
+                        && value != null
+                        && !string.IsNullOrEmpty(value.ToString()))
+                    {
+                        // 不为空的时间类型不做绑定变量
+                        strValues.Append($"{pi.Name}=to_date('{value.ToString()}','yyyy-mm-dd hh24:mi:ss'),");
+                    }
+                    else
+                    {
+                        strValues.Append($"{pi.Name}=:{pi.Name},");
+                    }
                 }
 
-                if ((noUpdateFileds != null && noUpdateFileds.Contains(pi.Name))
-                    || (updateFileds != null && !updateFileds.Contains(pi.Name)))
+                if (strValues.Length == 0)
                 {
-                    // 排除不更新字段 或 不在指定更新字段
-                    continue;
+                    throw new Exception("生成更新语句出错,请检查noUpdateFileds或updateFileds参数的大小写正确性");
                 }
-
-                object value = GetValue(pi.Name, entity);
-                value = value == null || string.IsNullOrEmpty(value.ToString()) ? "" : value;
-                if (pi.PropertyType == typeof(Nullable<DateTime>)
-                    && value != null
-                    && !string.IsNullOrEmpty(value.ToString()))
-                {
-                    // 不为空的时间类型不做绑定变量
-                    strValues.Append($"{pi.Name}=to_date('{value.ToString()}','yyyy-mm-dd hh24:mi:ss'),");
-                }
-                else
-                {
-                    strValues.Append($"{pi.Name}=:{pi.Name},");
-                }
+                return string.Format(
+                        "update {0} set {1} where {2}=: {3} {4}",
+                        t.Name + _year,
+                        strValues.ToString().TrimEnd(','),
+                        primaryKey,
+                        primaryKey,
+                        customSQL);
             }
-
-            if (strValues.Length == 0)
+            catch (Exception ex)
             {
-                throw new Exception("生成更新语句出错,请检查noUpdateFileds或updateFileds参数的大小写正确性");
+                throw ex;
             }
-
-            return string.Format(
-                    "update {0} set {1} where {2}='{3}' {4}",
-                    t.Name + _year,
-                    strValues.ToString().TrimEnd(','),
-                    primaryKey,
-                    pkvalue.ToString(),
-                    customSQL);
         }
 
         /// <summary>
@@ -738,6 +729,7 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <returns>SQL</returns>
         public virtual string DeleteSQLByParameter(string id, out DynamicParameters param)
         {
+            var entity = new T();
             string primaryKey = PrimaryKey(entity);
             if (string.IsNullOrWhiteSpace(primaryKey))
             {
@@ -751,7 +743,7 @@ namespace HongYang.Enterprise.Data.DataEntity
 
             param = new DynamicParameters();
             param.Add(primaryKey, id);
-            return $"delete from {t.Name}{_year} where 1=1 and {primaryKey} =:'{primaryKey}'";
+            return $"delete from {t.Name}{_year} where 1=1 and {primaryKey} =:{primaryKey}";
         }
 
         /// <summary>
@@ -761,7 +753,7 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <returns></returns>
         public virtual string LoadSQL(string id)
         {
-            entity = new T();
+            var entity = new T();
             return $"select * from {t.Name}{_year} where 1=1 and {PrimaryKey(entity)}='{id.FilterChar()}'";
         }
 
@@ -773,7 +765,7 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <returns></returns>
         public virtual string LoadSQLByParameter(string id, out DynamicParameters param)
         {
-            entity = new T();
+            var entity = new T();
             string primaryKey = PrimaryKey(entity);
             param = new DynamicParameters();
             param.Add(primaryKey, id);
@@ -789,85 +781,92 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <returns>SQL</returns>
         public virtual string ListSQL(T entity, string orderBy = "", DataPage dataPage = null)
         {
-            Query query = new Query()
+            try
             {
-                TableName = t.Name + _year,
-                Order = orderBy
-            };
-            StringBuilder sqlBuilder = new StringBuilder();
-            if (entity == null)
-            {
-                // 全表查询
+                Query query = new Query()
+                {
+                    TableName = t.Name + _year,
+                    Order = orderBy
+                };
+                StringBuilder sqlBuilder = new StringBuilder();
+                if (entity == null)
+                {
+                    // 全表查询
+                    return PageHelper.PageSQL(query);
+                }
+
+                PropertyInfo[] propertys = t.GetProperties();
+                foreach (PropertyInfo pi in propertys)
+                {
+                    object value = GetValue(pi.Name, entity);
+                    if (pi.IsNoMapKey()
+                        || value == null
+                        || string.IsNullOrEmpty(value.ToString()))
+                    {
+                        // 过滤非数据表字段和空值
+                        continue;
+                    }
+                    if (pi.PropertyType == typeof(Nullable<DateTime>))
+                    {
+                        // 可空时间类型字段处理
+                        if (pi.Name.ToUpper().Contains("_MAX"))
+                        {
+                            // 最大时间查询
+                            sqlBuilder.AppendFormat(
+                                " and {0} <= to_date('{1}','yyyy-mm-dd hh24:mi:ss')",
+                                pi.Name.ToUpper().Replace("_MAX", ""),
+                                GetValue(pi.Name, entity).ToString().FilterChar());
+                        }
+                        else if (pi.Name.ToUpper().Contains("_MIN"))
+                        {
+                            // 最小时间查询
+                            sqlBuilder.AppendFormat(
+                                " and {0} >= to_date('{1}','yyyy-mm-dd hh24:mi:ss')",
+                                pi.Name.ToUpper().Replace("_MIN", ""),
+                                GetValue(pi.Name, entity).ToString().FilterChar());
+                        }
+                        else
+                        {
+                            sqlBuilder.AppendFormat(
+                                " and {0} = to_date('{1}','yyyy-mm-dd hh24:mi:ss')",
+                                pi.Name,
+                                GetValue(pi.Name, entity).ToString().FilterChar());
+                        }
+                    }
+                    else
+                    {
+                        if (pi.Name.ToUpper().Contains("_MAX"))
+                        {
+                            // 最大值查询
+                            sqlBuilder.AppendFormat(" and {0}<='{1}'", pi.Name.ToUpper().Replace("_MAX", ""), value.ToString().FilterChar());
+                        }
+                        else if (pi.Name.ToUpper().Contains("_MIN"))
+                        {
+                            // 最小值查询
+                            sqlBuilder.AppendFormat(" and {0}>='{1}'", pi.Name.ToUpper().Replace("_MIN", ""), value.ToString().FilterChar());
+                        }
+                        else
+                        {
+                            // 普通字段
+                            sqlBuilder.AppendFormat(" and {0}='{1}'", pi.Name, value.ToString().FilterChar());
+                        }
+                    }
+                }
+
+                query.Filter = sqlBuilder.ToString();
+                if (dataPage != null)
+                {
+                    //分页处理
+                    IPageSql pageSql = PageSqlFactory.GetPageSql(_dbName);
+                    return pageSql.PageSql(dataPage, query);
+                }
+
                 return PageHelper.PageSQL(query);
             }
-
-            PropertyInfo[] propertys = t.GetProperties();
-            foreach (PropertyInfo pi in propertys)
+            catch (Exception ex)
             {
-                object value = GetValue(pi.Name, entity);
-                if (pi.IsNoMapKey() 
-                    || value == null 
-                    || string.IsNullOrEmpty(value.ToString()))
-                {
-                    // 过滤非数据表字段和空值
-                    continue;
-                }
-                if (pi.PropertyType == typeof(Nullable<DateTime>))
-                {
-                    // 可空时间类型字段处理
-                    if (pi.Name.ToUpper().Contains("_MAX"))
-                    {
-                        // 最大时间查询
-                        sqlBuilder.AppendFormat(
-                            " and {0} <= to_date('{1}','yyyy-mm-dd hh24:mi:ss')",
-                            pi.Name.ToUpper().Replace("_MAX", ""),
-                            GetValue(pi.Name, entity).ToString().FilterChar());
-                    }
-                    else if (pi.Name.ToUpper().Contains("_MIN"))
-                    {
-                        // 最小时间查询
-                        sqlBuilder.AppendFormat(
-                            " and {0} >= to_date('{1}','yyyy-mm-dd hh24:mi:ss')",
-                            pi.Name.ToUpper().Replace("_MIN", ""),
-                            GetValue(pi.Name, entity).ToString().FilterChar());
-                    }
-                    else
-                    {
-                        sqlBuilder.AppendFormat(
-                            " and {0} = to_date('{1}','yyyy-mm-dd hh24:mi:ss')",
-                            pi.Name,
-                            GetValue(pi.Name, entity).ToString().FilterChar());
-                    }
-                }
-                else
-                {
-                    if (pi.Name.ToUpper().Contains("_MAX"))
-                    {
-                        // 最大值查询
-                        sqlBuilder.AppendFormat(" and {0}<='{1}'", pi.Name.ToUpper().Replace("_MAX", ""), value.ToString().FilterChar());
-                    }
-                    else if (pi.Name.ToUpper().Contains("_MIN"))
-                    {
-                        // 最小值查询
-                        sqlBuilder.AppendFormat(" and {0}>='{1}'", pi.Name.ToUpper().Replace("_MIN", ""), value.ToString().FilterChar());
-                    }
-                    else
-                    {
-                        // 普通字段
-                        sqlBuilder.AppendFormat(" and {0}='{1}'", pi.Name, value.ToString().FilterChar());
-                    }
-                }
+                throw ex;
             }
-
-            query.Filter = sqlBuilder.ToString();
-            if (dataPage != null)
-            {
-                //分页处理
-                IPageSql pageSql = PageSqlFactory.GetPageSql(_dbName);
-                return pageSql.PageSql(dataPage, query);
-            }
-
-            return PageHelper.PageSQL(query);
         }
 
         /// <summary>
@@ -880,91 +879,98 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <returns>SQL</returns>
         public virtual string ListSQLByParameter(T entity, out DynamicParameters parameters, string orderBy = "", DataPage dataPage = null)
         {
-            parameters = new DynamicParameters();
-            Query query = new Query()
+            try
             {
-                TableName = t.Name + _year,
-                Order = orderBy
-            };
-            StringBuilder sqlBuilder = new StringBuilder();
-            if (entity == null)
-            {
-                // 全表查询
+                parameters = new DynamicParameters();
+                Query query = new Query()
+                {
+                    TableName = t.Name + _year,
+                    Order = orderBy
+                };
+                StringBuilder sqlBuilder = new StringBuilder();
+                if (entity == null)
+                {
+                    // 全表查询
+                    return PageHelper.PageSQL(query);
+                }
+
+                PropertyInfo[] propertys = t.GetProperties();
+                foreach (PropertyInfo pi in propertys)
+                {
+                    object value = GetValue(pi.Name, entity);
+                    if (pi.IsNoMapKey()
+                        || value == null
+                        || string.IsNullOrEmpty(value.ToString()))
+                    {
+                        // 过滤非数据表字段和空值
+                        continue;
+                    }
+                    if (pi.PropertyType == typeof(Nullable<DateTime>))
+                    {
+                        // 可空时间类型字段处理
+                        if (pi.Name.ToUpper().Contains("_MAX"))
+                        {
+                            // 最大时间查询
+                            sqlBuilder.AppendFormat(
+                                " and {0} <= to_date('{1}','yyyy-mm-dd hh24:mi:ss')",
+                                pi.Name.ToUpper().Replace("_MAX", ""),
+                                GetValue(pi.Name, entity).ToString().FilterChar());
+                        }
+                        else if (pi.Name.ToUpper().Contains("_MIN"))
+                        {
+                            // 最小时间查询
+                            sqlBuilder.AppendFormat(
+                                " and {0} >= to_date('{1}','yyyy-mm-dd hh24:mi:ss')",
+                                pi.Name.ToUpper().Replace("_MIN", ""),
+                                GetValue(pi.Name, entity).ToString().FilterChar());
+                        }
+                        else
+                        {
+                            sqlBuilder.AppendFormat(
+                                " and {0} = to_date('{1}','yyyy-mm-dd hh24:mi:ss')",
+                                pi.Name,
+                                GetValue(pi.Name, entity).ToString().FilterChar());
+                        }
+                    }
+                    else
+                    {
+                        string piName = pi.Name.ToUpper();
+                        if (piName.Contains("_MAX"))
+                        {
+                            // 最大值查询
+                            piName = piName.Replace("_MAX", "");
+                            sqlBuilder.AppendFormat(" and {0}<=:{0}", piName);
+                        }
+                        else if (pi.Name.ToUpper().Contains("_MIN"))
+                        {
+                            // 最小值查询
+                            piName = piName.Replace("_MIN", "");
+                            sqlBuilder.AppendFormat(" and {0}>=:{0}", piName);
+                        }
+                        else
+                        {
+                            // 普通字段
+                            sqlBuilder.AppendFormat(" and {0}=:{0}", pi.Name);
+                        }
+
+                        parameters.Add(piName, value.ToString().FilterChar());
+                    }
+                }
+
+                query.Filter = sqlBuilder.ToString();
+                if (dataPage != null)
+                {
+                    //分页处理
+                    IPageSql pageSql = PageSqlFactory.GetPageSql(_dbName);
+                    return pageSql.PageSql(dataPage, query);
+                }
+
                 return PageHelper.PageSQL(query);
             }
-
-            PropertyInfo[] propertys = t.GetProperties();
-            foreach (PropertyInfo pi in propertys)
+            catch (Exception ex)
             {
-                object value = GetValue(pi.Name, entity);
-                if (pi.IsNoMapKey()
-                    || value == null
-                    || string.IsNullOrEmpty(value.ToString()))
-                {
-                    // 过滤非数据表字段和空值
-                    continue;
-                }
-                if (pi.PropertyType == typeof(Nullable<DateTime>))
-                {
-                    // 可空时间类型字段处理
-                    if (pi.Name.ToUpper().Contains("_MAX"))
-                    {
-                        // 最大时间查询
-                        sqlBuilder.AppendFormat(
-                            " and {0} <= to_date('{1}','yyyy-mm-dd hh24:mi:ss')",
-                            pi.Name.ToUpper().Replace("_MAX", ""),
-                            GetValue(pi.Name, entity).ToString().FilterChar());
-                    }
-                    else if (pi.Name.ToUpper().Contains("_MIN"))
-                    {
-                        // 最小时间查询
-                        sqlBuilder.AppendFormat(
-                            " and {0} >= to_date('{1}','yyyy-mm-dd hh24:mi:ss')",
-                            pi.Name.ToUpper().Replace("_MIN", ""),
-                            GetValue(pi.Name, entity).ToString().FilterChar());
-                    }
-                    else
-                    {
-                        sqlBuilder.AppendFormat(
-                            " and {0} = to_date('{1}','yyyy-mm-dd hh24:mi:ss')",
-                            pi.Name,
-                            GetValue(pi.Name, entity).ToString().FilterChar());
-                    }
-                }
-                else
-                {
-                    string piName = pi.Name.ToUpper();
-                    if (piName.Contains("_MAX"))
-                    {
-                        // 最大值查询
-                        piName = piName.Replace("_MAX", "");
-                        sqlBuilder.AppendFormat(" and {0}<=:{0}", piName);
-                    }
-                    else if (pi.Name.ToUpper().Contains("_MIN"))
-                    {
-                        // 最小值查询
-                        piName = piName.Replace("_MIN", "");
-                        sqlBuilder.AppendFormat(" and {0}>=:{0}", piName);
-                    }
-                    else
-                    {
-                        // 普通字段
-                        sqlBuilder.AppendFormat(" and {0}=:{0}", pi.Name);
-                    }
-
-                    parameters.Add(piName, value.ToString().FilterChar());
-                }
+                throw ex;
             }
-
-            query.Filter = sqlBuilder.ToString();
-            if (dataPage != null)
-            {
-                //分页处理
-                IPageSql pageSql = PageSqlFactory.GetPageSql(_dbName);
-                return pageSql.PageSql(dataPage, query);
-            }
-
-            return PageHelper.PageSQL(query);
         }
 
         /// <summary>
@@ -974,42 +980,7 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <returns></returns>
         public virtual DynamicParameters CreateDataDynamicParameters(T entity)
         {
-            return DBHelper.CreateDataDynamicParameters<T>(entity);
-        }
-
-        /// <summary>
-        /// 创建参数化的参数列表
-        /// </summary>
-        /// <param name="entity"></param>
-        /// <returns></returns>
-        public virtual List<IDataParameter> CreateDataParameter(T entity)
-        {
-            List<IDataParameter> parameters = new List<IDataParameter>();
-            PropertyInfo[] propertys = t.GetProperties();
-            foreach (PropertyInfo pi in propertys)
-            {
-                if (pi.IsNoMapKey()
-                    || pi.Name.ToUpper().Contains("_MAX")
-                    || pi.Name.ToUpper().Contains("_MIN"))
-                {
-                    // 未映射字段、主键、_MAX和_MIN做为查询关键字不做为更新字段，因此过滤掉
-                    continue;
-                }
-
-                object value = GetValue(pi.Name, entity);
-                if (value == null || string.IsNullOrEmpty(value.ToString()))
-                {
-                    parameters.Add(new OracleParameter(pi.Name, DBNull.Value));
-                }
-                else
-                {
-                    OracleParameter param = new OracleParameter();
-                    param.ParameterName = pi.Name;
-                    param.Value = value.ToString().FilterChar();
-                    parameters.Add(param);
-                }
-            }
-            return parameters;
+            return DBHelper.CreateDataDynamicParameters<T>(entity, _track);
         }
         #endregion
 
@@ -1066,7 +1037,7 @@ namespace HongYang.Enterprise.Data.DataEntity
                     object[] attrs = pi.GetCustomAttributes(true);
                     foreach (object attr in attrs)
                     {
-                        //判断KeyAttribute属性，获取主键字段
+                        //判断KeyAttribute属性，获取主键字
                         if ("System.ComponentModel.DataAnnotations.KeyAttribute" == attr.GetType().FullName)
                         {
                             return pi.Name;

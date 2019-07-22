@@ -40,7 +40,7 @@ namespace HongYang.Enterprise.Data
         }
 
         /// <summary>
-        /// 过滤条件
+        /// 过滤条件，条件从and开始, eg: and name = 'Lin' and age = 1
         /// </summary>
         private string filter;
         public string Filter
@@ -51,7 +51,7 @@ namespace HongYang.Enterprise.Data
             }
             set
             {
-                filter = value;
+                filter = $"1=1 {value}";
             }
         }
 
