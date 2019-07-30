@@ -14,7 +14,10 @@ namespace HongYang.Enterprise.UnitTests
         [TestMethod]
         public void TestMethod1()
         {
-            //log4net.config和appsettings.json拷贝到bin/Debug下
+            /*
+             * log4net.config和appsettings.json拷贝到bin/Debug下
+             * 
+             * */
             LogHelper.LogInit(new DefaultLogAppenderHelper());
 
             //连接名称
@@ -22,11 +25,13 @@ namespace HongYang.Enterprise.UnitTests
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
             OracleDataEntityDAL<Ep_log_message> dal = new OracleDataEntityDAL<Ep_log_message>(dbName);
-            //Delete------------------------------------------------------
+
+            #region CRUD
+            //Delete
             int deleteCount = dal.Delete("0123456789");
             LogHelper.Write($"DAL.Delete：{deleteCount}条记录");
 
-            //Insert--------------------------------------------------------
+            //Insert
             int insertCount = dal.Insert(new Ep_log_message()
             {
                 Logid = "0123456789",
@@ -43,7 +48,7 @@ namespace HongYang.Enterprise.UnitTests
             LogHelper.Write($"DAL.Insert：{insertCount}条记录");
 
 
-            //Update--------------------------------------------------------
+            //Update
             int updateCount = dal.Update(new Ep_log_message()
             {
                 Logid = "0123456789",
@@ -59,8 +64,26 @@ namespace HongYang.Enterprise.UnitTests
             });
             LogHelper.Write($"DAL.Update：{updateCount}条记录");
 
+            //Load
+            LogHelper.Write(dal.Load("0123456789"));
+            sb.AppendLine("------------DAL.Load:");
+            sb.AppendLine(JsonConvert.SerializeObject(dal.Load("0123456789")));
+            sb.AppendLine("------------\r\n");
 
-            //InsertList----------------------------------------------------
+            //List
+            sb.AppendLine("------------DAL.List():");
+            sb.AppendLine(JsonConvert.SerializeObject(dal.List()));
+            sb.AppendLine("------------DAL.List(T):");
+            sb.AppendLine(JsonConvert.SerializeObject(
+                dal.List(new Ep_log_message()
+                {
+                    Sendto = "192.168.101.233"
+                })));
+            sb.AppendLine("------------\r\n");
+            #endregion
+
+            #region TranscationList
+            //InsertList
             List<Ep_log_message> logs = new List<Ep_log_message>();
             for (int i = 0; i < 100; i++)
             {
@@ -81,28 +104,13 @@ namespace HongYang.Enterprise.UnitTests
 
             LogHelper.Write("DAL.InsertList：" + (ret ? "成功": "失败"));
 
-            //UpdateList------------------------------------------------------
+            //UpdateList
             ret = dal.UpdateList(logs);
             LogHelper.Write("DAL.UpdateList：" + (ret ? "成功" : "失败"));
+            #endregion
 
-            //Load------------------------------------------------------------
-            LogHelper.Write(dal.Load("0123456789"));
-            sb.AppendLine("------------DAL.Load:");
-            sb.AppendLine(JsonConvert.SerializeObject(dal.Load("0123456789")));
-            sb.AppendLine("------------\r\n");
-
-            //List-------------------------------------------------------------
-            sb.AppendLine("------------DAL.List():");
-            sb.AppendLine(JsonConvert.SerializeObject(dal.List()));
-            sb.AppendLine("------------DAL.List(T):");
-            sb.AppendLine(JsonConvert.SerializeObject(
-                dal.List(new Ep_log_message()
-                {
-                    Sendto = "192.168.101.233"
-                })));
-            sb.AppendLine("------------\r\n");
-
-            //GetDataTable------------------------------------------------------
+            #region GetDataTable
+            //GetDataTable
             sb.AppendLine("------------DAL.GetDataTable(T):");
             sb.AppendLine(JsonConvert.SerializeObject(dal.GetDataTable(
                 new Ep_log_message()
@@ -110,8 +118,10 @@ namespace HongYang.Enterprise.UnitTests
                     Sendto = "192.168.101.233"
                 })));
             sb.AppendLine("------------\r\n");
+            #endregion
 
-            //SQL---------------------------------------------------------------
+            #region SQL
+            //SQL
             sb.AppendLine("------------SQL:");
             var log = new Ep_log_message()
             {
@@ -134,6 +144,7 @@ namespace HongYang.Enterprise.UnitTests
             sb.AppendLine("InsertSQLByParameter：" + dal.InsertSQLByParameter(log));
             sb.AppendLine("------------\r\n");
             LogHelper.Write(sb.ToString());
+            #endregion
         }
     }
 }

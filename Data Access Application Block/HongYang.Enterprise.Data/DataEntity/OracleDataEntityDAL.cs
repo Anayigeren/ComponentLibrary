@@ -105,7 +105,7 @@ namespace HongYang.Enterprise.Data.DataEntity
             try
             {
                 return DBHelper.ExecuteSQLHelper(
-                    InsertSQLByParameter(entity),entity, _dbName, error, DBTrack.Close, transaction, commandTimeout);
+                    InsertSQLByParameter(entity), entity, _dbName, error, DBTrack.Close, transaction, commandTimeout);
             }
             catch (Exception ex)
             {
@@ -125,7 +125,7 @@ namespace HongYang.Enterprise.Data.DataEntity
         {
             try
             {
-                return DBHelper.TranscationExecute((db) => 
+                return DBHelper.TranscationExecute((db) =>
                 {
                     foreach (T entity in entityList)
                     {
@@ -139,7 +139,7 @@ namespace HongYang.Enterprise.Data.DataEntity
                     return true;
                 }, _dbName, error, DBTrack.Close);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 ex.DALExceptionHandler(error, _track, $"OracleDataEntityDAL.InsertList({t.Name})");
             }
@@ -334,7 +334,7 @@ namespace HongYang.Enterprise.Data.DataEntity
         /// <returns></returns>
         public virtual T Load(string id, int commandTimeout = DEFAULTTIMEOUT)
         {
-            T entity = default;
+            T entity = default(T);
             var conn = CreateConnectionAndOpen();
             try
             {

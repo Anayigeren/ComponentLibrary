@@ -112,7 +112,7 @@ namespace HongYang.Enterprise.Data
                 returnMessage = ex.Message;
                 if (track == DBTrack.Open)
                 {
-                    LogHelper.Write("DBHelper.SqlHelper方法异常：\n" + ex.Message 
+                    LogHelper.Write("DBHelper.SqlHelper方法异常：\n" + ex.Message
                         + $"{StackTraceLog.GetStackTraceLog().ToString()}");
                 }
             }
@@ -190,13 +190,13 @@ namespace HongYang.Enterprise.Data
                     LogHelper.Write($"查询大数据量超过{_traceDBRowLength}条，实际值为{data.Tables[0].Rows.Count}。\n" +
                         $"{StackTraceLog.GetStackTraceLog().ToString()}");
                 }
-                
+
                 return data;
             }
             catch (Exception ex)
             {
                 msg.Result = false;
-                msg.AddMsg("执行DBHelper.SqlHelper()方法异常。sqlText:" + sqlText + "\n" 
+                msg.AddMsg("执行DBHelper.SqlHelper()方法异常。sqlText:" + sqlText + "\n"
                     + ex.Message + StackTraceLog.GetStackTraceLog().ToString());
                 if (track == DBTrack.Open)
                     LogHelper.Write("sqlText:" + sqlText + "\n" + ex.ToString() + StackTraceLog.GetStackTraceLog().ToString());
@@ -256,7 +256,7 @@ namespace HongYang.Enterprise.Data
         {
             try
             {
-                msg =  msg ?? new Msg();
+                msg = msg ?? new Msg();
                 Database db = DatabaseFactory.GetDatabase(dataBaseName);
                 return db.ExecuteDataTable(sqlText, param, null, cmdTimeout, cmdType);
             }
@@ -646,7 +646,7 @@ namespace HongYang.Enterprise.Data
                 returnMessage = ex.Message;
                 if (track == DBTrack.Open)
                 {
-                    LogHelper.Write("执行QueryDynamics异常，sqlText:" + sqlText + "\n" + ex.ToString() 
+                    LogHelper.Write("执行QueryDynamics异常，sqlText:" + sqlText + "\n" + ex.ToString()
                         + StackTraceLog.GetStackTraceLog().ToString());
                 }
             }
