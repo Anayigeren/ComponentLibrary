@@ -1,4 +1,5 @@
 # ComponentLibrary
 基础组件
 
-## HongYang新一版基础组件（未测试版本）
+## 新一版数据基础组件
+  基于Dapper封装的DBHlper
