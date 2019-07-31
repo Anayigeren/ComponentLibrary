@@ -15,6 +15,7 @@ namespace HongYang.Enterprise.Logging
     /// </summary>
     public class LogHelper
     {
+        public static string LogDbName = "Log";
 
         /// <summary>
         /// 文本日志记录器
@@ -37,8 +38,13 @@ namespace HongYang.Enterprise.Logging
         /// <summary>
         /// 初始化日志组件
         /// </summary>
-        /// <param name="appenderHelper">配置文件的绝对路径</param>
-        public static void LogInit(ILogAppenderHelper appenderHelper)
+        public static void LogInit() => LogInit(LogDbName);
+
+        /// <summary>
+        /// 初始化日志组件
+        /// </summary>
+        /// <param name="dbName">写入数据的连接串名称</param>
+        public static void LogInit(string dbName)
         {
             string configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "log4net.config");
             if (!File.Exists(configFilePath))
@@ -46,7 +52,7 @@ namespace HongYang.Enterprise.Logging
                 throw new FileNotFoundException(configFilePath + "日志配置文件未发现");
             }
 
-            AppenderHelper = appenderHelper;
+            AppenderHelper = new DefaultLogAppenderHelper(dbName);
             XmlConfigurator.Configure(Valiteconfigfile(configFilePath));
             RollFileLog = LogManager.GetLogger("RollFile") ;
         }

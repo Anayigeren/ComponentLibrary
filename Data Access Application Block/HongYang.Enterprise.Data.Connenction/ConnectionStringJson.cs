@@ -1,5 +1,4 @@
-﻿using HongYang.Enterprise.Logging;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -17,7 +16,6 @@ namespace HongYang.Enterprise.Data.Connenction
     {
         /// <summary>
         /// 初始化时的配置链接
-        /// 
         /// </summary>
         public ConnectionStringJson(): base()
         {
@@ -25,7 +23,6 @@ namespace HongYang.Enterprise.Data.Connenction
             CONFIG_FILE_PATH = System.IO.Path.Combine(dirPath, ConnectionConst.CONFIG_JSON_FILE_NAME);
             if (!System.IO.File.Exists(CONFIG_FILE_PATH))
             {
-                LogHelper.Write(ConnectionConst.CONFIG_FILE_NOFOUND + CONFIG_FILE_PATH);
                 throw new Exception(ConnectionConst.CONFIG_FILE_NOFOUND + CONFIG_FILE_PATH);
             }
 
@@ -73,7 +70,6 @@ namespace HongYang.Enterprise.Data.Connenction
             }
             catch (Exception ex)
             {
-                LogHelper.Write(ConnectionConst.CONFIG_FILE_EXCEPTION + ex.Message);
                 throw new Exception(ConnectionConst.CONFIG_FILE_EXCEPTION + ex.Message);
             }
         }

@@ -17,15 +17,5 @@ namespace HongYang.Enterprise.Logging
         /// <param name="errorMessage">写数据失败提示信息</param>
         /// <returns></returns>
         bool WriteDb<T>(T message, ref string errorMessage) where T : class, new();
-
-    }
-
-    public class DefaultLogAppenderHelper : ILogAppenderHelper
-    {
-        public bool WriteDb<T>(T message, ref string errorMessage) where T : class, new()
-        {
-            errorMessage = "未实现日志写入数据的方法，请注入ILogAppenderHelper的实现";
-            return false;
-        }
     }
 }

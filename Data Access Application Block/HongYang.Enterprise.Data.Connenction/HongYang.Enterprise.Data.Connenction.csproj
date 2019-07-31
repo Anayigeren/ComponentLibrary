@@ -58,11 +58,5 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\Logging Application Block\HongYang.Enterprise.Logging\HongYang.Enterprise.Logging.csproj">
-      <Project>{91080f48-ea37-4814-aa1f-9da0415d2c3c}</Project>
-      <Name>HongYang.Enterprise.Logging</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
