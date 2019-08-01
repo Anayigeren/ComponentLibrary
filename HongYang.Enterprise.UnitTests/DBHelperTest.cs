@@ -19,7 +19,8 @@ namespace HongYang.Enterprise.UnitTests
              * log4net.config和appsettings.json拷贝到bin/Debug下
              * */
 
-            LogHelper.LogInit(new DefaultLogAppenderHelper());
+            LogHelper.LogInit();
+
             string dbName = "Admin";
 
             OracleDataEntityDAL<Ep_log_message> dal = new OracleDataEntityDAL<Ep_log_message>(dbName);

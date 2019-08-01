@@ -18,7 +18,7 @@ namespace HongYang.Enterprise.UnitTests
              * log4net.config和appsettings.json拷贝到bin/Debug下
              * 
              * */
-            LogHelper.LogInit(new DefaultLogAppenderHelper());
+            LogHelper.LogInit();
 
             //连接名称
             string dbName = "Admin";
